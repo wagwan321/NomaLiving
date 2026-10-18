@@ -473,13 +473,12 @@ let passT;
 addEventListener("scroll", () => { clearTimeout(passT); passT = setTimeout(revealPassed, 150); }, { passive: true });
 
 // start reveals once the intro hands over (intro.js)
-const introDone = window.NomaIntro ? window.NomaIntro.done : Promise.resolve();
-if (window.NomaIntro?.playing && lenis) lenis.stop();
-introDone.then(() => {
-  if (lenis) { lenis.scrollTo(0, { immediate: true }); lenis.start(); }
-  observeAll();
-  refreshPills();
-});
+const intro = window.NomaIntro || { reveal: Promise.resolve(), done: Promise.resolve() };
+if (intro.playing && lenis) lenis.stop();
+// the page starts its entrance while the last frame glides into the hero arch…
+intro.reveal.then(() => { observeAll(); refreshPills(); });
+// …and scrolling comes back once the intro is gone
+intro.done.then(() => { if (lenis) { lenis.scrollTo(0, { immediate: true }); lenis.start(); } });
 
 /* ---------- Parallax ---------- */
 const pEls = $$("[data-parallax]");
