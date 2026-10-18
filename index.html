@@ -67,28 +67,13 @@
 </svg>
 
 <!-- ============ Cinematic intro ============
-     Night exterior → the doors → doors swing in → dolly into the lobby → site -->
+     3D walk-through rendered in Blender (blender/noma_entrance.blend):
+     the Hamra entrance at night → the doors swing in → into the lobby → site -->
 <div class="intro" id="intro" role="presentation">
-  <div class="intro__lobby"><img src="assets/img/intro/lobby.jpg" alt="" decoding="async"></div>
-
-  <div class="intro__cam">
-    <div class="intro__scene">
-      <div class="intro__sign" aria-hidden="true">
-        <svg><use href="#logo"/></svg>
-        <span>Living</span>
-      </div>
-      <div class="intro__doorway">
-        <div class="intro__flood"></div>
-        <div class="intro__leaf intro__leaf--l"><svg class="intro__crest"><use href="#logo"/></svg><i class="intro__handle"></i></div>
-        <div class="intro__leaf intro__leaf--r"><svg class="intro__crest"><use href="#logo"/></svg><i class="intro__handle"></i></div>
-      </div>
-      <div class="intro__floor"></div>
-      <div class="intro__lights"></div>
-    </div>
-  </div>
-
-  <div class="intro__ext"><img src="assets/img/intro/exterior-night.jpg" alt="" decoding="async"></div>
-  <div class="intro__bloom"></div>
+  <video class="intro__video" muted playsinline preload="auto" poster="assets/video/noma-intro-poster.jpg" aria-hidden="true">
+    <source src="assets/video/noma-intro-720.mp4" type="video/mp4" media="(max-width: 900px)">
+    <source src="assets/video/noma-intro.mp4" type="video/mp4">
+  </video>
   <div class="intro__shade"></div>
 
   <div class="intro__loading" aria-hidden="true"><svg><use href="#logo"/></svg></div>
