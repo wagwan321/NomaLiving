@@ -1,10 +1,11 @@
 """Turn rendered PNG frames into the web image sequence used by the scroll walk-through.
 
 Usage (from the project root):
-    python blender/frames.py night blender/render      # every 2nd frame of a full render
-    python blender/frames.py day   blender/render_day  # a render already made with step 2
+    python blender/frames.py night blender/render
+    python blender/frames.py day   blender/render_day
 
-Writes assets/cine/<mode>/000.webp … at the full render size (1920×1080).
+Every rendered frame is kept, in order: assets/cine/<mode>/000.webp … at the full
+render size (1920×1080). Phones load every second one; the page blends between them.
 """
 import os
 import shutil
@@ -14,8 +15,7 @@ from PIL import Image
 
 mode, src = sys.argv[1], sys.argv[2]
 nums = sorted(int(f[2:6]) for f in os.listdir(src) if f.startswith("f_") and f.endswith(".png"))
-# keep odd frames (1, 3, 5 … 289) so both modes line up frame for frame
-picked = [n for n in nums if n % 2 == 1]
+picked = nums
 
 out = os.path.join("assets", "cine", mode)
 shutil.rmtree(out, ignore_errors=True)

@@ -50,20 +50,50 @@
   };
   tick(); setInterval(tick, 30000);
 
-  /* ---------- frames: full 1920×1080, loaded and decoded ahead of time ---------- */
-  const N = 145;
-  const src = (i) => `assets/cine/${mode}/${String(i).padStart(3, "0")}.webp?v=8`;
-  const frames = new Array(N);
-  const ready = new Uint8Array(N);
-  let want = 0, drawn = -1;
-  const load = (i) => {
-    if (frames[i]) return Promise.resolve();
-    const im = new Image(); frames[i] = im;
-    im.src = src(i);
-    return im.decode().then(() => { ready[i] = 1; if (Math.abs(i - want) < 4) paint(); }, () => {});
+  /* ---------- frames: full 1920×1080 ---------- */
+  // 290 rendered frames; phones take every second one to save data. Between two frames
+  // the next one is blended in by exactly how far you've scrolled, so motion stays fluid
+  // at any scroll speed instead of stepping frame to frame.
+  // All frames are downloaded as compact files; only a window of frames around the
+  // current position is decoded (off the main thread) so drawing never waits on a decode.
+  const TOTAL = 290;
+  const SMALL = Math.min(innerWidth, innerHeight) < 600;   // phones (either orientation)
+  const STEP = SMALL ? 2 : 1;
+  const ids = []; for (let i = 0; i < TOTAL; i += STEP) ids.push(i);
+  const N = ids.length;
+  const BACK = SMALL ? 5 : 8, AHEAD = SMALL ? 10 : 18;
+  const src = (j) => `assets/cine/${mode}/${String(ids[j]).padStart(3, "0")}.webp?v=9`;
+  const blobs = new Array(N);
+  const bitmaps = new Array(N);
+  const decoding = new Set();
+  let pos = 0, dir = 1, drawnKey = "";
+  const ready = (i) => i >= 0 && i < N && !!bitmaps[i];
+
+  const decode = (i) => {
+    if (!blobs[i] || bitmaps[i] || decoding.has(i)) return;
+    decoding.add(i);
+    createImageBitmap(blobs[i]).then((bm) => {
+      decoding.delete(i);
+      const a = Math.floor(pos);
+      if (i < a - BACK - 4 || i > a + AHEAD + 4) { bm.close(); return; }
+      bitmaps[i] = bm;
+      if (Math.abs(i - pos) < 2) paint();
+    }, () => decoding.delete(i));
   };
-  // first frame, then a coarse pass across the whole walk-through, then fill the gaps
+  // keep decoded frames around the current position (more ahead in the scroll direction)
+  const keepWindow = () => {
+    const a = Math.floor(pos);
+    const lo = Math.max(0, a - (dir > 0 ? BACK : AHEAD)), hi = Math.min(N - 1, a + (dir > 0 ? AHEAD : BACK));
+    for (let i = a; i <= hi; i++) decode(i);
+    for (let i = a - 1; i >= lo; i--) decode(i);
+    for (let i = 0; i < N; i++) {
+      if (bitmaps[i] && (i < lo - 4 || i > hi + 4)) { bitmaps[i].close(); bitmaps[i] = null; }
+    }
+  };
+  const fetchFrame = (i) => fetch(src(i)).then((r) => r.blob()).then((b) => { blobs[i] = b; keepWindow(); }, () => {});
+  // first frame, then the frames right after it, then a coarse-to-fine pass over the rest
   const order = [];
+  for (let i = 0; i < Math.min(N, AHEAD + 1); i++) order.push(i);
   for (const step of [16, 8, 4, 2, 1]) for (let i = 0; i < N; i += step) if (!order.includes(i)) order.push(i);
 
   /* ---------- canvas: drawn 1:1, scaled to the screen by CSS (object-fit: cover) ---------- */
@@ -72,23 +102,31 @@
   const ctx = canvas.getContext("2d", { alpha: false });
   const nearest = (i) => {
     for (let o = 0; o < N; o++) {
-      if (ready[i - o]) return i - o;
-      if (ready[i + o]) return i + o;
+      if (ready(i - o)) return i - o;
+      if (ready(i + o)) return i + o;
     }
     return -1;
   };
   function paint() {
-    const k = nearest(want);
-    if (k < 0 || k === drawn) return;
-    ctx.drawImage(frames[k], 0, 0, 1920, 1080);
-    drawn = k;
+    const a = Math.floor(pos), f = pos - a;
+    const ka = nearest(a);
+    if (ka < 0) return;
+    const blend = ka === a && f > 0.02 && ready(a + 1);
+    const key = blend ? `${a}:${Math.round(f * 64)}` : `${ka}`;
+    if (key === drawnKey) return;
+    ctx.globalAlpha = 1;
+    ctx.drawImage(bitmaps[ka], 0, 0, 1920, 1080);
+    if (blend) {
+      ctx.globalAlpha = f;
+      ctx.drawImage(bitmaps[a + 1], 0, 0, 1920, 1080);
+      ctx.globalAlpha = 1;
+    }
+    drawnKey = key;
+    if (!cine.classList.contains("is-ready")) cine.classList.add("is-ready");
   }
 
   (async () => {
-    await load(0);
-    cine.classList.add("is-ready");
-    paint();
-    for (let k = 1; k < order.length; k += 8) await Promise.all(order.slice(k, k + 8).map(load));
+    for (let k = 0; k < order.length; k += 6) await Promise.all(order.slice(k, k + 6).map(fetchFrame));
   })();
 
   /* ---------- scroll → frame (Lenis already smooths the scroll) ---------- */
@@ -103,7 +141,8 @@
   const update = () => {
     queued = false;
     const p = clamp(scrollY / end());
-    want = Math.round(p * (N - 1));
+    const next = p * (N - 1);
+    if (next !== pos) { dir = next > pos ? 1 : -1; pos = next; keepWindow(); }
     paint();
     if (Math.abs(p - lastP) > 0.0005) {
       lastP = p;
