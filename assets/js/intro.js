@@ -21,7 +21,7 @@
   if (skip) { intro?.remove(); resolveReveal(); resolveDone(); return; }
 
   const root = document.documentElement;
-  root.classList.add("intro-on");
+  root.classList.add("intro-on", "page-blur");
   if ("scrollRestoration" in history) history.scrollRestoration = "manual";
   scrollTo(0, 0);
 
@@ -46,19 +46,33 @@
   // Skip / failure: a quick fade, no choreography
   const bail = () => {
     if (ended || landing) return;
+    root.classList.remove("page-blur");
     intro.classList.add("is-out", "is-fast");
     finish(650);
   };
 
-  // The hand-off: "Welcome home." over the lobby softly dissolves into the page
+  // Everything in the first screen is shown in place right away (no piece-by-piece
+  // entrance), so the only motion at hand-off is the blur.
+  const settleHero = () => {
+    root.classList.add("instant");
+    document.querySelectorAll(".hero [data-reveal], .hero [data-split]").forEach((el) => el.classList.add("is-in"));
+    document.body.offsetHeight;            // apply without transitions
+    setTimeout(() => root.classList.remove("instant"), 60);
+  };
+
+  // The hand-off: the whole screen blurs out of "Welcome home." while the page
+  // underneath, already in place, comes into focus
   const land = () => {
     if (ended || landing) return;
     landing = true;
     timers.forEach(clearTimeout);
-    state("is-landing");
-    // let the dissolve get going, then start the page's own entrance underneath
-    setTimeout(resolveReveal, 450);
-    setTimeout(() => finish(0), 1900);
+    settleHero();
+    resolveReveal();
+    setTimeout(() => {
+      state("is-landing");
+      root.classList.remove("page-blur");
+    }, 30);
+    setTimeout(() => finish(0), 1700);
   };
 
   intro.querySelector(".intro__skip").addEventListener("click", bail);
