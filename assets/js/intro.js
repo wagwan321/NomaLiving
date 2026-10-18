@@ -1,8 +1,7 @@
 /* ==========================================================================
    Noma Living: cinematic intro
-   Plays the Blender walk-through (street → door opens → lobby). On the last
-   frame the whole picture glides into the hero's arch and dissolves into the
-   page (on narrow screens it lifts away like a curtain instead).
+   Plays the Blender walk-through (street → door opens → lobby), lands on
+   "Welcome home." and softly dissolves into the page.
    Exposes window.NomaIntro = { playing, reveal, done }:
      reveal → the page should start its entrance animations
      done   → the intro is gone, scrolling can resume
@@ -26,7 +25,6 @@
   if ("scrollRestoration" in history) history.scrollRestoration = "manual";
   scrollTo(0, 0);
 
-  const frame = intro.querySelector(".intro__frame");
   const video = intro.querySelector(".intro__video");
   const timers = [];
   let ended = false, landing = false;
@@ -52,40 +50,15 @@
     finish(650);
   };
 
-  // The hand-off: last frame → hero arch
+  // The hand-off: "Welcome home." over the lobby softly dissolves into the page
   const land = () => {
     if (ended || landing) return;
     landing = true;
     timers.forEach(clearTimeout);
-    const arch = document.querySelector(".hero__arch");
-    const r = arch && arch.getBoundingClientRect();
-    const fits = r && r.width > 0 && r.top >= 0 && r.bottom <= innerHeight + 2 && innerWidth > 900;
-
-    // show the hero photo underneath right away, without its own reveal
-    if (arch) {
-      const img = arch.querySelector("img");
-      arch.style.transition = "none"; if (img) img.style.transition = "none";
-      arch.classList.add("is-in");
-      requestAnimationFrame(() => requestAnimationFrame(() => { arch.style.transition = ""; if (img) img.style.transition = ""; }));
-    }
-
     state("is-landing");
-    resolveReveal();                       // headline, nav and badges animate in around it
-    if (fits) {
-      // pin the frame where it is, then let CSS glide it into the arch
-      Object.assign(frame.style, { top: "0px", left: "0px", width: innerWidth + "px", height: innerHeight + "px" });
-      frame.getBoundingClientRect();
-      state("is-morph");
-      Object.assign(frame.style, {
-        top: r.top + "px", left: r.left + "px", width: r.width + "px", height: r.height + "px",
-        borderRadius: `${r.width / 2}px ${r.width / 2}px 0 0`,
-      });
-      setTimeout(() => state("is-dissolve"), 1500);   // landed: melt into the real photo
-      setTimeout(() => finish(0), 2500);
-    } else {
-      state("is-curtain");
-      setTimeout(() => finish(0), 1500);
-    }
+    // let the dissolve get going, then start the page's own entrance underneath
+    setTimeout(resolveReveal, 450);
+    setTimeout(() => finish(0), 1900);
   };
 
   intro.querySelector(".intro__skip").addEventListener("click", bail);
