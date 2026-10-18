@@ -127,41 +127,42 @@ em { font-family: var(--font-accent); font-style: italic; font-weight: 400; lett
 .cine-spacer { height: 560vh; }
 .has-cine main { margin-top: -100vh; }
 
-.cine {
-  position: fixed; inset: 0; z-index: 300; overflow: hidden; background: #0B0908;
-  transition: opacity .7s ease, visibility 0s 0s;
-}
+.cine { position: fixed; inset: 0; z-index: 300; overflow: hidden; background: #0B0908; transition: opacity .6s ease, visibility 0s 0s; }
 .cine > * { position: absolute; }
-.cine__canvas { inset: 0; width: 100%; height: 100%; display: block; opacity: 0; transition: opacity 1s ease, filter 1.1s cubic-bezier(.3, 0, .2, 1), transform 1.6s cubic-bezier(.3, 0, .2, 1); }
+/* drawn at 1920×1080 and scaled by the GPU to fill any screen */
+.cine__canvas { inset: 0; width: 100%; height: 100%; display: block; object-fit: cover; opacity: 0; transition: opacity .8s ease, filter 1.1s cubic-bezier(.3, 0, .2, 1), transform 1.6s cubic-bezier(.3, 0, .2, 1); }
 .cine.is-ready .cine__canvas { opacity: 1; }
-.cine__bg { inset: 0; width: 100%; height: 100%; display: none; filter: blur(18px) brightness(.55) saturate(1.1); transform: scale(1.15); }
-@media (orientation: portrait) { .cine__bg { display: block; } }
-.cine.is-through .cine__bg { filter: blur(28px) brightness(.55); }
+/* soft top gradient so the nav reads over the picture */
+.cine::after { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 150px; background: linear-gradient(rgba(10, 8, 6, .45), rgba(10, 8, 6, 0)); pointer-events: none; z-index: 2; }
 
 /* hand-off: the whole screen blurs out of "Welcome home." while the page comes into focus */
 .cine.is-through { opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 1.3s cubic-bezier(.5, 0, .3, 1) .12s, visibility 0s 1.45s; }
 .cine.is-through .cine__canvas { filter: blur(28px); transform: scale(1.04); }
 .cine.is-through .cine__welcome { filter: blur(16px); }
 main { transition: filter 1.5s cubic-bezier(.3, 0, .2, 1); }
-.page-blur main, .page-blur .nav { filter: blur(24px); }
-.cine-on .nav { opacity: 0; pointer-events: none; }
+.page-blur main, .page-blur .nav { filter: blur(24px); transition: none; }
 .cine-on .fab, .cine-on .mobile-cta { opacity: 0; pointer-events: none; }
 /* first-screen content is placed instantly (no piece-by-piece entrance) */
 .instant [data-reveal], .instant [data-reveal] img, .instant [data-split] .line > span { transition: none !important; }
 
+/* the regular nav stays on top of the walk-through, in light */
+.cine-on .nav { z-index: 310; }
+.cine-on .nav .brand { color: #FBF7F1; }
+.cine-on .nav__links a { color: rgba(251, 247, 241, .8); }
+.cine-on .nav__links a:hover { color: #fff; }
+.cine-on .nav .btn--ghost { --fg: #FBF7F1; --hover: #FBF7F1; border-color: rgba(251, 247, 241, .4); }
+.cine-on .nav .btn--ghost:hover { color: var(--ink); }
+.cine-on .burger { background: rgba(251, 247, 241, .16); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+
 .cine__shade { inset: 0; z-index: 2; pointer-events: none; opacity: var(--welcome, 0); background: radial-gradient(ellipse 70% 60% at 50% 50%, rgba(18, 12, 8, .55), rgba(18, 12, 8, .3)); }
-.cine__bars { inset: 0; z-index: 4; pointer-events: none; }
-.cine__bars i { position: absolute; left: 0; right: 0; height: 6vh; background: #0B0908; transform: scaleY(var(--bars, 1)); }
-.cine__bars i:first-child { top: 0; transform-origin: top; }
-.cine__bars i:last-child { bottom: 0; transform-origin: bottom; }
 
 .cine__place {
-  left: 0; right: 0; top: calc(6vh + 22px); z-index: 5; margin: 0; display: flex; justify-content: center; align-items: center; gap: 12px;
-  color: rgba(255, 244, 228, .92); font-size: 12px; font-weight: 500; letter-spacing: .32em; text-transform: uppercase;
-  text-shadow: 0 2px 14px rgba(0, 0, 0, .55); opacity: var(--place, 1); transition: opacity .4s ease;
+  left: 28px; bottom: 30px; z-index: 5; margin: 0; display: flex; align-items: center; gap: 12px;
+  color: rgba(255, 244, 228, .92); font-size: 12px; font-weight: 500; letter-spacing: .3em; text-transform: uppercase;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, .55); opacity: var(--place, 1);
 }
 .cine__clock { font-variant-numeric: tabular-nums; letter-spacing: .12em; opacity: .75; padding-left: 12px; border-left: 1px solid rgba(255, 244, 228, .35); }
-.cine__dot { width: 7px; height: 7px; border-radius: 50%; background: #ffb862; box-shadow: 0 0 0 0 rgba(255, 184, 98, .6); animation: pulse 2.2s infinite; }
+.cine__dot { width: 7px; height: 7px; border-radius: 50%; background: #ffb862; animation: pulse 2.2s infinite; }
 [data-time="day"] .cine__dot { background: #ffd36b; }
 
 .cine__welcome { inset: 0; z-index: 5; display: grid; place-content: center; justify-items: center; gap: 18px; text-align: center; color: var(--paper); pointer-events: none; opacity: var(--welcome, 0); transition: filter 1.1s cubic-bezier(.3, 0, .2, 1); }
@@ -171,32 +172,27 @@ main { transition: filter 1.5s cubic-bezier(.3, 0, .2, 1); }
 
 /* scroll hint: a mouse with a dash travelling down */
 .cine__hint {
-  left: 50%; bottom: calc(6vh + 26px); z-index: 5; transform: translateX(-50%); display: grid; justify-items: center; gap: 12px;
-  color: rgba(255, 244, 228, .9); font-size: 11.5px; font-weight: 500; letter-spacing: .3em; text-transform: uppercase; white-space: nowrap;
-  text-shadow: 0 2px 12px rgba(0, 0, 0, .6); opacity: 0; transition: opacity .8s ease .4s;
+  left: 50%; bottom: 34px; z-index: 5; transform: translateX(-50%); display: grid; justify-items: center; gap: 12px;
+  color: rgba(255, 244, 228, .92); font-size: 11.5px; font-weight: 500; letter-spacing: .3em; text-transform: uppercase; white-space: nowrap;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, .6); opacity: 0; transition: opacity .8s ease .3s;
 }
-.cine.is-ready .cine__hint { opacity: var(--hint, 1); transition-delay: 0s; transition-duration: .35s; }
-.cine__mouse { width: 26px; height: 42px; border: 1.8px solid rgba(255, 244, 228, .9); border-radius: 14px; position: relative; box-shadow: 0 2px 14px rgba(0, 0, 0, .35); }
+.cine.is-ready .cine__hint { opacity: var(--hint, 1); transition: none; }
+.cine__mouse { width: 26px; height: 42px; border: 1.8px solid rgba(255, 244, 228, .92); border-radius: 14px; position: relative; box-shadow: 0 2px 14px rgba(0, 0, 0, .35); }
 .cine__mouse i { position: absolute; left: 50%; top: 8px; width: 3px; height: 8px; margin-left: -1.5px; border-radius: 2px; background: #fff4e4; animation: wheel 1.8s cubic-bezier(.6, 0, .3, 1) infinite; }
 @keyframes wheel { 0% { transform: translateY(0); opacity: 0; } 20% { opacity: 1; } 70% { transform: translateY(14px); opacity: 0; } 100% { transform: translateY(14px); opacity: 0; } }
 
-.cine__progress { left: 0; right: 0; bottom: 6vh; z-index: 5; height: 2px; background: rgba(255, 244, 228, .12); opacity: var(--bars, 1); }
+.cine__progress { left: 0; right: 0; bottom: 0; z-index: 5; height: 2px; background: rgba(255, 244, 228, .14); }
 .cine__progress i { position: absolute; inset: 0; background: linear-gradient(90deg, #ffb862, #ffe2b8); transform-origin: left; transform: scaleX(var(--progress, 0)); }
 
 .cine__loading { inset: 0; z-index: 3; display: grid; place-items: center; color: #F3E6D3; transition: opacity .6s ease; pointer-events: none; }
 .cine__loading svg { width: 170px; height: 34px; animation: breathe 1.4s ease-in-out infinite alternate; }
 @keyframes breathe { from { opacity: .3; } to { opacity: 1; } }
 .cine.is-ready .cine__loading { opacity: 0; }
-
-.cine__skip { right: 18px; top: calc(6vh + 14px); z-index: 6; display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px 0 16px; border-radius: 999px; border: 1px solid rgba(255, 240, 220, .28); color: rgba(255, 240, 220, .85); font-size: 12px; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; background: rgba(14, 11, 9, .35); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); opacity: 0; transition: opacity .6s ease, background .3s, color .3s; }
-.cine__skip .ico { width: 14px; height: 14px; transform: rotate(90deg); }
-.cine__skip:hover { background: var(--paper); color: var(--ink); }
-.cine.is-ready .cine__skip { opacity: var(--bars, 1); }
 @media (max-width: 700px) {
-  .cine__place { font-size: 10.5px; letter-spacing: .24em; }
-  .cine__skip { top: auto; bottom: calc(6vh + 14px); right: 12px; height: 32px; font-size: 11px; }
-  .cine__hint { bottom: calc(6vh + 64px); }
+  .cine__place { left: 16px; bottom: 96px; font-size: 10.5px; letter-spacing: .22em; }
+  .cine__hint { bottom: 30px; }
 }
+
 
 
 @keyframes draw { to { stroke-dashoffset: 0; } }
