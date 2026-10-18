@@ -472,15 +472,14 @@ const revealPassed = () => $$("[data-reveal]:not(.is-in), [data-split]:not(.is-i
 let passT;
 addEventListener("scroll", () => { clearTimeout(passT); passT = setTimeout(revealPassed, 150); }, { passive: true });
 
-// start reveals once the loader lifts
-const loaderDelay = reduceMotion || sessionStorageSafe() ? 0 : 1650;
-function sessionStorageSafe() {
-  try { const seen = sessionStorage.getItem("noma-seen"); sessionStorage.setItem("noma-seen", 1); return !!seen; }
-  catch { return false; }
-}
-if (!loaderDelay) $(".loader")?.remove();
-setTimeout(() => { observeAll(); refreshPills(); }, loaderDelay);
-setTimeout(() => $(".loader")?.remove(), 2600);
+// start reveals once the intro hands over (intro.js)
+const introDone = window.NomaIntro ? window.NomaIntro.done : Promise.resolve();
+if (window.NomaIntro?.playing && lenis) lenis.stop();
+introDone.then(() => {
+  if (lenis) { lenis.scrollTo(0, { immediate: true }); lenis.start(); }
+  observeAll();
+  refreshPills();
+});
 
 /* ---------- Parallax ---------- */
 const pEls = $$("[data-parallax]");

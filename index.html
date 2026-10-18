@@ -66,13 +66,41 @@
   </defs>
 </svg>
 
-<!-- ============ Loader ============ -->
-<div class="loader" aria-hidden="true">
-  <div class="loader__mark">
-    <svg class="loader__logo"><use href="#logo"/></svg>
-    <span class="loader__sub">Living</span>
+<!-- ============ Cinematic intro ============
+     Night exterior → the doors → doors swing in → dolly into the lobby → site -->
+<div class="intro" id="intro" role="presentation">
+  <div class="intro__lobby"><img src="assets/img/intro/lobby.jpg" alt="" decoding="async"></div>
+
+  <div class="intro__cam">
+    <div class="intro__scene">
+      <div class="intro__sign" aria-hidden="true">
+        <svg><use href="#logo"/></svg>
+        <span>Living</span>
+      </div>
+      <div class="intro__doorway">
+        <div class="intro__flood"></div>
+        <div class="intro__leaf intro__leaf--l"><svg class="intro__crest"><use href="#logo"/></svg><i class="intro__handle"></i></div>
+        <div class="intro__leaf intro__leaf--r"><svg class="intro__crest"><use href="#logo"/></svg><i class="intro__handle"></i></div>
+      </div>
+      <div class="intro__floor"></div>
+      <div class="intro__lights"></div>
+    </div>
   </div>
+
+  <div class="intro__ext"><img src="assets/img/intro/exterior-night.jpg" alt="" decoding="async"></div>
+  <div class="intro__bloom"></div>
+  <div class="intro__shade"></div>
+
+  <div class="intro__loading" aria-hidden="true"><svg><use href="#logo"/></svg></div>
+  <p class="intro__place" aria-hidden="true">Hamra · Beirut</p>
+  <div class="intro__welcome" aria-hidden="true">
+    <span class="intro__kicker">Noma Living</span>
+    <p><span>Welcome</span> <span><em>home.</em></span></p>
+  </div>
+  <div class="intro__bars" aria-hidden="true"><i></i><i></i></div>
+  <button class="intro__skip" type="button">Skip intro<svg class="ico"><use href="#i-chev"/></svg></button>
 </div>
+<script src="assets/js/intro.js"></script>
 
 <!-- ============ Header ============ -->
 <header class="nav" id="top">
