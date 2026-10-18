@@ -69,26 +69,35 @@
   let pos = 0, dir = 1, drawnKey = "";
   const ready = (i) => i >= 0 && i < N && !!bitmaps[i];
 
-  const decode = (i) => {
-    if (!blobs[i] || bitmaps[i] || decoding.has(i)) return;
-    decoding.add(i);
-    createImageBitmap(blobs[i]).then((bm) => {
-      decoding.delete(i);
-      const a = Math.floor(pos);
-      if (i < a - BACK - 4 || i > a + AHEAD + 4) { bm.close(); return; }
-      bitmaps[i] = bm;
-      if (Math.abs(i - pos) < 2) paint();
-    }, () => decoding.delete(i));
+  // at most two decodes in flight, nearest frame first, so decoding never crowds out drawing
+  const MAX_DECODES = 2;
+  const pump = () => {
+    if (decoding.size >= MAX_DECODES) return;
+    const a = Math.floor(pos);
+    const lo = Math.max(0, a - (dir > 0 ? BACK : AHEAD)), hi = Math.min(N - 1, a + (dir > 0 ? AHEAD : BACK));
+    for (let o = 0; o <= Math.max(a - lo, hi - a) && decoding.size < MAX_DECODES; o++) {
+      for (const i of dir > 0 ? [a + o, a - o] : [a - o, a + o]) {
+        if (i < lo || i > hi || !blobs[i] || bitmaps[i] || decoding.has(i)) continue;
+        decoding.add(i);
+        createImageBitmap(blobs[i]).then((bm) => {
+          decoding.delete(i);
+          const c = Math.floor(pos);
+          if (i < c - BACK - 4 || i > c + AHEAD + 4) bm.close();
+          else { bitmaps[i] = bm; if (Math.abs(i - pos) < 2) paint(); }
+          pump();
+        }, () => { decoding.delete(i); pump(); });
+        if (decoding.size >= MAX_DECODES) break;
+      }
+    }
   };
   // keep decoded frames around the current position (more ahead in the scroll direction)
   const keepWindow = () => {
     const a = Math.floor(pos);
     const lo = Math.max(0, a - (dir > 0 ? BACK : AHEAD)), hi = Math.min(N - 1, a + (dir > 0 ? AHEAD : BACK));
-    for (let i = a; i <= hi; i++) decode(i);
-    for (let i = a - 1; i >= lo; i--) decode(i);
     for (let i = 0; i < N; i++) {
       if (bitmaps[i] && (i < lo - 4 || i > hi + 4)) { bitmaps[i].close(); bitmaps[i] = null; }
     }
+    pump();
   };
   const fetchFrame = (i) => fetch(src(i)).then((r) => r.blob()).then((b) => { blobs[i] = b; keepWindow(); }, () => {});
   // first frame, then the frames right after it, then a coarse-to-fine pass over the rest

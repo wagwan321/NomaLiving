@@ -20,8 +20,9 @@ picked = nums
 out = os.path.join("assets", "cine", mode)
 shutil.rmtree(out, ignore_errors=True)
 os.makedirs(out)
-for i, n in enumerate(picked):
+for n in picked:
+    # file name = render frame - 1, so a partial render (e.g. odd frames only) lands in place
     im = Image.open(os.path.join(src, f"f_{n:04d}.png")).convert("RGB")
-    im.save(os.path.join(out, f"{i:03d}.webp"), "WEBP", quality=86, method=6)
+    im.save(os.path.join(out, f"{n - 1:03d}.webp"), "WEBP", quality=86, method=6)
 total = sum(os.path.getsize(os.path.join(out, f)) for f in os.listdir(out))
 print(f"{mode}: {len(picked)} frames at {im.size[0]}x{im.size[1]}, {total / 1e6:.1f} MB")
