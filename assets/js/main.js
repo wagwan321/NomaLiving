@@ -99,8 +99,10 @@ const nav = $(".nav");
 const fab = $(".fab");
 const mobileCta = $(".mobile-cta");
 let lastY = 0;
+// scroll measured from where the website starts (after the walk-through, if any)
+const siteTop = () => (window.NomaIntro && window.NomaIntro.enabled ? window.NomaIntro.end() : 0);
 const onScroll = () => {
-  const y = window.scrollY;
+  const y = window.scrollY - siteTop();
   nav.classList.toggle("is-scrolled", y > 20);
   if (!document.body.classList.contains("menu-open")) nav.classList.toggle("is-hidden", y > 400 && y > lastY);
   const past = y > window.innerHeight * 0.7;
@@ -143,7 +145,7 @@ document.addEventListener("click", (e) => {
   if (a.dataset.tab) setFormTab(a.dataset.tab);
   if (document.body.classList.contains("menu-open")) setMenu(false);
   if (a.closest(".modal")) closeModal();
-  if (id === "#top") { lenis ? lenis.scrollTo(0) : scrollTo({ top: 0, behavior: "smooth" }); return; }
+  if (id === "#top") { const t = siteTop(); lenis ? lenis.scrollTo(t) : scrollTo({ top: t, behavior: "smooth" }); return; }
   scrollToEl($(id));
 });
 
@@ -472,13 +474,8 @@ const revealPassed = () => $$("[data-reveal]:not(.is-in), [data-split]:not(.is-i
 let passT;
 addEventListener("scroll", () => { clearTimeout(passT); passT = setTimeout(revealPassed, 150); }, { passive: true });
 
-// start reveals once the intro hands over (intro.js)
-const intro = window.NomaIntro || { reveal: Promise.resolve(), done: Promise.resolve() };
-if (intro.playing && lenis) lenis.stop();
-// the page starts its entrance while the last frame glides into the hero arch…
-intro.reveal.then(() => { observeAll(); refreshPills(); });
-// …and scrolling comes back once the intro is gone
-intro.done.then(() => { if (lenis) { lenis.scrollTo(0, { immediate: true }); lenis.start(); } });
+observeAll();
+refreshPills();
 
 /* ---------- Parallax ---------- */
 const pEls = $$("[data-parallax]");

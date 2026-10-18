@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300..700&family=DM+Sans:opsz,wght@9..40,400..600&family=Instrument+Serif:ital@1&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=5">
+  <link rel="stylesheet" href="assets/css/style.css?v=7">
   <script>document.documentElement.classList.add("js")</script>
 </head>
 <body>
@@ -66,29 +66,30 @@
   </defs>
 </svg>
 
-<!-- ============ Cinematic intro ============
-     3D walk-through rendered in Blender (blender/noma_entrance.blend):
-     the Hamra entrance at night → the door swings in → into the lobby,
-     then the last frame glides into the hero's arch and becomes the page -->
-<div class="intro" id="intro" role="presentation">
-  <div class="intro__frame">
-    <video class="intro__video" muted playsinline preload="auto" poster="assets/video/noma-intro-poster.jpg?v=5" aria-hidden="true">
-      <source src="assets/video/noma-intro-720.mp4?v=5" type="video/mp4" media="(max-width: 900px)">
-      <source src="assets/video/noma-intro.mp4?v=5" type="video/mp4">
-    </video>
-    <div class="intro__shade"></div>
-  </div>
-
-  <div class="intro__loading" aria-hidden="true"><svg><use href="#logo"/></svg></div>
-  <p class="intro__place" aria-hidden="true">Hamra · Beirut</p>
-  <div class="intro__welcome" aria-hidden="true">
-    <span class="intro__kicker">Noma Living</span>
+<!-- ============ Scroll walk-through ============
+     Rendered in Blender (blender/noma_entrance*.blend). Scrolling walks you from the
+     street in Hamra through the door to reception; day or night follows the sun in
+     Beirut. At the end the screen blurs into the page. -->
+<div class="cine" id="cine" aria-hidden="true">
+  <canvas class="cine__bg"></canvas>
+  <canvas class="cine__canvas"></canvas>
+  <div class="cine__shade"></div>
+  <div class="cine__bars"><i></i><i></i></div>
+  <p class="cine__place"><span class="cine__dot"></span><span>Hamra, Beirut</span><span class="cine__clock"></span></p>
+  <div class="cine__welcome">
+    <span class="cine__kicker">Noma Living</span>
     <p><span>Welcome</span> <span><em>home.</em></span></p>
   </div>
-  <div class="intro__bars" aria-hidden="true"><i></i><i></i></div>
-  <button class="intro__skip" type="button">Skip intro<svg class="ico"><use href="#i-chev"/></svg></button>
+  <div class="cine__hint">
+    <span class="cine__mouse"><i></i></span>
+    <span class="cine__hint-text">Scroll to step inside</span>
+  </div>
+  <div class="cine__progress"><i></i></div>
+  <div class="cine__loading"><svg><use href="#logo"/></svg></div>
+  <button class="cine__skip" type="button" tabindex="-1">Skip intro<svg class="ico"><use href="#i-chev"/></svg></button>
 </div>
-<script src="assets/js/intro.js?v=5"></script>
+<div class="cine-spacer" aria-hidden="true"></div>
+<script src="assets/js/intro.js?v=7"></script>
 
 <!-- ============ Header ============ -->
 <header class="nav" id="top">
@@ -590,6 +591,6 @@
 <div class="toast" role="status" aria-live="polite"></div>
 
 <script src="https://unpkg.com/lenis@1.1.13/dist/lenis.min.js"></script>
-<script src="assets/js/main.js?v=5"></script>
+<script src="assets/js/main.js?v=7"></script>
 </body>
 </html>
