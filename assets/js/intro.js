@@ -165,6 +165,25 @@
     }
   };
   const onScroll = () => { if (!queued) { queued = true; requestAnimationFrame(update); } };
+
+  // ?fps shows a live meter: screen refreshes per second, and how many of them painted a new image
+  if (params.has("fps")) {
+    const meter = document.createElement("div");
+    meter.style.cssText = "position:fixed;left:12px;top:84px;z-index:400;padding:8px 12px;border-radius:10px;background:rgba(0,0,0,.65);color:#fff;font:600 12px/1.5 ui-monospace,monospace;pointer-events:none";
+    document.documentElement.appendChild(meter);
+    let frames = 0, paints = 0, lastKey = drawnKey, t0 = performance.now();
+    const loop = (t) => {
+      frames++;
+      if (drawnKey !== lastKey) { paints++; lastKey = drawnKey; }
+      if (t - t0 >= 500) {
+        const s = (t - t0) / 1000;
+        meter.textContent = `${Math.round(frames / s)} fps · ${Math.round(paints / s)} new images/s · frame ${Math.floor(pos) + 1}/${N}`;
+        frames = paints = 0; t0 = t;
+      }
+      requestAnimationFrame(loop);
+    };
+    requestAnimationFrame(loop);
+  }
   addEventListener("scroll", onScroll, { passive: true });
   addEventListener("resize", onScroll);
 
