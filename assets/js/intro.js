@@ -56,13 +56,16 @@
   // at any scroll speed instead of stepping frame to frame.
   // All frames are downloaded as compact files; only a window of frames around the
   // current position is decoded (off the main thread) so drawing never waits on a decode.
-  const TOTAL = 290;
+  // where each frame sits along the scroll (blender/frames.py): fast camera moves get more
+  // scroll distance, so every bit of scrolling shows a similar amount of change
+  const TL = window.NOMA_TIMELINE || null;
+  const TOTAL = TL ? TL.length : 290;
   const SMALL = Math.min(innerWidth, innerHeight) < 600;   // phones (either orientation)
   const STEP = SMALL ? 2 : 1;
   const ids = []; for (let i = 0; i < TOTAL; i += STEP) ids.push(i);
   const N = ids.length;
   const BACK = SMALL ? 5 : 8, AHEAD = SMALL ? 10 : 18;
-  const src = (j) => `assets/cine/${mode}/${String(ids[j]).padStart(3, "0")}.webp?v=9`;
+  const src = (j) => `assets/cine/${mode}/${String(ids[j]).padStart(3, "0")}.webp?v=12`;
   const blobs = new Array(N);
   const bitmaps = new Array(N);
   const decoding = new Set();
@@ -145,12 +148,19 @@
   const clamp = (v) => Math.min(1, Math.max(0, v));
   const smooth = (a, b, v) => { const t = clamp((v - a) / (b - a)); return t * t * (3 - 2 * t); };
   const set = (name, v) => cine.style.setProperty(name, v.toFixed(3));
+  const frameAt = (p) => {
+    if (!TL) return p * (TOTAL - 1);
+    let lo = 0, hi = TOTAL - 1;
+    while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (TL[mid] <= p) lo = mid; else hi = mid; }
+    const span = TL[hi] - TL[lo];
+    return lo + (span > 0 ? (p - TL[lo]) / span : 0);
+  };
   let through = false, queued = false, lastP = -1;
 
   const update = () => {
     queued = false;
     const p = clamp(scrollY / end());
-    const next = p * (N - 1);
+    const next = Math.min(N - 1, frameAt(p) / STEP);
     if (next !== pos) { dir = next > pos ? 1 : -1; pos = next; keepWindow(); }
     paint();
     if (Math.abs(p - lastP) > 0.0005) {
