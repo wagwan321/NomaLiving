@@ -65,7 +65,7 @@
   const ids = []; for (let i = 0; i < TOTAL; i += STEP) ids.push(i);
   const N = ids.length;
   const BACK = SMALL ? 5 : 8, AHEAD = SMALL ? 10 : 18;
-  const src = (j) => `assets/cine/${mode}/${String(ids[j]).padStart(3, "0")}.webp?v=12`;
+  const src = (j) => `assets/cine/${mode}/${String(ids[j]).padStart(3, "0")}.webp?v=14`;
   const blobs = new Array(N);
   const bitmaps = new Array(N);
   const decoding = new Set();

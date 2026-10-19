@@ -25,7 +25,7 @@ shutil.rmtree(out, ignore_errors=True)
 os.makedirs(out)
 for n in nums:
     im = Image.open(os.path.join(src, f"f_{n:04d}.png")).convert("RGB")
-    im.save(os.path.join(out, f"{n:03d}.webp"), "WEBP", quality=82, method=6)
+    im.save(os.path.join(out, f"{n:03d}.webp"), "WEBP", quality=72, method=6)
 total = sum(os.path.getsize(os.path.join(out, f)) for f in os.listdir(out))
 print(f"{mode}: {len(nums)} frames at {im.size[0]}x{im.size[1]}, {total / 1e6:.1f} MB")
 
