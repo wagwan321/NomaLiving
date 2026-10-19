@@ -47,6 +47,8 @@
     : sunAltitude(new Date(), BEIRUT.lat, BEIRUT.lon) > -2 ? "day" : "night";
   root.dataset.time = mode;
   root.classList.add("has-cine", "cine-on");
+  // a scrollbar that takes up space (Windows, Linux): never hide it, or the picture jumps sideways
+  if (innerWidth - root.clientWidth > 0) root.classList.add("solid-scrollbar");
 
   const clock = cine.querySelector(".cine__clock");
   const tick = () => {
@@ -381,14 +383,34 @@
   // walk-through on its own, at an even pace, all the way to the website. Scrolling the other
   // way reverses it; scrolling up from the top of the website walks you back out to the street.
   // If the connection falls behind, it waits for the frames instead of jumping.
-  const AUTO_MS = 9000;                                  // the full walk-through, start to end
+  // Playback follows its own pace (blender/autoplay_pace.py): walking at an even speed, and
+  // turns stretched out so the camera never rotates faster than ~40° a second. It cruises at a
+  // steady speed with a gentle start and stop only at the very ends.
+  const PACE = window.NOMA_PACE || null;                 // playback time (0-1) of each frame
+  const PACE_MS = (window.NOMA_PACE_SECONDS || 9.6) * 1000;
+  const lerpAt = (arr, fr) => {                          // value at a fractional frame
+    if (!arr) return fr / (TOTAL - 1);
+    const a = Math.min(TOTAL - 2, Math.max(0, Math.floor(fr)));
+    return arr[a] + (arr[a + 1] - arr[a]) * (fr - a);
+  };
+  const frameAtPace = (u) => {
+    if (!PACE) return u * (TOTAL - 1);
+    let lo = 0, hi = TOTAL - 1;
+    while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (PACE[mid] <= u) lo = mid; else hi = mid; }
+    const span = PACE[hi] - PACE[lo];
+    return lo + (span > 0 ? (u - PACE[lo]) / span : 0);
+  };
+  // steady cruise with short, smooth speed-up and slow-down ramps (r = share of the run)
+  const cruise = (k, r = 0.08) => {
+    const v = 1 / (1 - r);
+    return k < r ? v * k * k / (2 * r) : k > 1 - r ? 1 - v * (1 - k) * (1 - k) / (2 * r) : v * (k - r / 2);
+  };
   const smoothScroller = () => (typeof lenis !== "undefined" && lenis) || null;
   const jump = (y) => {
     const l = smoothScroller();
     if (l) l.scrollTo(y, { immediate: true, force: true }); else scrollTo(0, y);
     update();
   };
-  const easeInOut = (k) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
   let auto = null, pendingAuto = 0;
   function stopAuto(release = true) {
     if (!auto) return;
@@ -401,13 +423,14 @@
   const autoTo = (way) => {
     if (off || holding) return;
     if (waiting) { pendingAuto = way; return; }          // still loading: start when ready
-    const target = way > 0 ? end() : 0, y0 = scrollY, dist = Math.abs(target - y0);
+    const u0 = lerpAt(PACE, frameAt(clamp(scrollY / end()))), u1 = way > 0 ? 1 : 0;
     stopAuto(false);
-    if (dist < 2) { const l = smoothScroller(); if (l) l.start(); return; }
+    if (Math.abs(u1 - u0) < 0.002) { const l = smoothScroller(); if (l) l.start(); return; }
     const l = smoothScroller();
     if (l) l.stop(); else root.style.overflow = "hidden";
     root.classList.add("cine-auto");
-    const a = { way, y0, target, dur: Math.max(1400, AUTO_MS * dist / end()), elapsed: 0, last: 0, raf: 0 };
+    const a = { way, u0, u1, dur: Math.max(1400, PACE_MS * Math.abs(u1 - u0)), elapsed: 0, last: 0, raf: 0 };
+    const frameFor = (k) => frameAtPace(a.u0 + (a.u1 - a.u0) * cruise(k));
     auto = a;
     const step = (t) => {
       if (auto !== a) return;
@@ -415,11 +438,11 @@
       a.last = t;
       // buffering: don't move onto a frame that hasn't downloaded yet
       const k1 = clamp((a.elapsed + dt) / a.dur);
-      const y1 = a.y0 + (a.target - a.y0) * easeInOut(k1);
-      const i1 = Math.min(N - 1, Math.round(frameAt(clamp(y1 / end())) / STEP));
+      const i1 = Math.min(N - 1, Math.round(frameFor(k1) / STEP));
       if (state[i1] === 2 || k1 >= 1) a.elapsed += dt;
       const k = clamp(a.elapsed / a.dur);
-      jump(a.y0 + (a.target - a.y0) * easeInOut(k));
+      // the end points are exact scroll positions; in between, frame -> scroll via the timeline
+      jump(k >= 1 ? (a.u1 ? end() : 0) : lerpAt(TL, frameFor(k)) * end());
       if (k < 1) a.raf = requestAnimationFrame(step);
       else if (auto === a) stopAuto(true);
     };
@@ -444,7 +467,9 @@
   };
   const onIntent = (e) => {
     const way = intent(e);
-    if (!way || off || holding) return;
+    if (!way || off) return;
+    // while it plays, holds on the website or waits to load, the page itself must not move
+    if (holding || waiting) { if (e.cancelable && scrollY <= end() + 2) e.preventDefault(); if (!waiting) return; }
     const y = scrollY, top = end();
     if (auto) {
       if (way !== auto.way) autoTo(way);               // changed their mind: reverse

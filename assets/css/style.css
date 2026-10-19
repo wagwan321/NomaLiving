@@ -41,7 +41,11 @@
 html { -webkit-text-size-adjust: 100%; scroll-padding-top: 90px; }
 html.lenis, html.lenis body { height: auto; }
 .lenis.lenis-smooth { scroll-behavior: auto !important; }
-.lenis.lenis-stopped { overflow: hidden; }
+/* Locking scroll by hiding overflow also removes the scrollbar on computers, so the whole page
+   (and the walk-through picture) jumps 15px sideways. Where the scrollbar takes space
+   (html.solid-scrollbar, set by intro.js) scrolling is locked in script instead; overlay
+   scrollbars (phones, tablets, Macs) use overflow. */
+html:not(.solid-scrollbar).lenis.lenis-stopped { overflow: hidden; }
 body {
   margin: 0;
   font-family: var(--font-body);
@@ -178,9 +182,10 @@ main { transition: filter 1.5s cubic-bezier(.3, 0, .2, 1); }
 }
 .cine.is-ready .cine__hint { opacity: var(--hint, 1); transition: none; }
 /* first visit: scrolling waits on the opening shot until enough of the walk-through has arrived */
-html.cine-wait { overflow: hidden; }
+html:not(.solid-scrollbar).cine-wait { overflow: hidden; }
 /* the walk-through playing on its own: the page itself doesn't scroll under the finger */
-html.cine-auto { overflow: hidden; touch-action: none; }
+html.cine-auto { touch-action: none; }
+html:not(.solid-scrollbar).cine-auto { overflow: hidden; }
 .cine-wait .cine.is-ready .cine__hint { opacity: .35; transition: opacity .6s ease; }
 .cine-wait .cine__mouse i, .cine-wait .cine__swipe i { animation-play-state: paused; }
 .cine-opening .cine.is-ready .cine__hint { transition: opacity .7s ease; }
