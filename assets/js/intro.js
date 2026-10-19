@@ -166,6 +166,7 @@
         inflight--; state[i] = 2; blobs[i] = b; loaded++;
         set("--loaded", loaded / N);
         if (loaded === N) cine.classList.add("is-loaded");
+        if (waiting && enough()) openGate();
         keepWindow();
       }, () => {
         if (g !== gen) return;
@@ -179,6 +180,29 @@
       });
     }
   };
+
+  // First visit: hold scrolling on the opening shot (with the loading line) until the stretch
+  // ahead and a coarse pass over the whole walk-through have arrived, so a slow connection never
+  // scrolls into frames that aren't there yet. Never longer than WAIT_MAX.
+  const WAIT_MAX = 6000;
+  let waiting = false;
+  const enough = () => {
+    for (let i = 0; i < Math.min(N, AHEAD * 2); i++) if (state[i] !== 2) return false;
+    for (let i = 0; i < N; i += 16 / STEP) if (state[i] !== 2) return false;
+    return true;
+  };
+  const holdScroll = (on) => {
+    const l = typeof lenis !== "undefined" && lenis;
+    if (l) on ? l.stop() : l.start();
+    root.classList.toggle("cine-wait", on);
+  };
+  function openGate() {
+    if (!waiting) return;
+    waiting = false;
+    holdScroll(false);
+    root.classList.add("cine-opening");
+    setTimeout(() => root.classList.remove("cine-opening"), 900);
+  }
 
   // keep decoded frames around the current position (more ahead in the scroll direction)
   const keepWindow = () => {
@@ -261,6 +285,7 @@
   function disable() {
     if (off) return;
     off = true; gen++;
+    openGate();
     bitmaps.forEach(release);
     window.NomaIntro.enabled = false;
     root.classList.remove("has-cine", "cine-on", "page-blur");
@@ -342,18 +367,18 @@
   const onScroll = () => { if (!queued) { queued = true; requestAnimationFrame(update); } };
 
   // Frame-rate watch: while you scroll through the walk-through, time every screen refresh.
-  // If this device keeps missing frames (under ~45 fps, or many long stalls), step down one
+  // If this device keeps missing frames (under ~50 fps, or many long stalls), step down one
   // quality level: lighter images to decode and draw. Remembered for next visit.
   let scrollAt = 0, samples = [], lastT = 0;
   const watch = (t) => {
     if (off) return;
     if (lastT && !through && !document.hidden && t > settleUntil && t - scrollAt < 150) {
       samples.push(t - lastT);
-      if (samples.length >= 120) {
+      if (samples.length >= 60) {
         const s = samples.slice().sort((a, b) => a - b);
         const median = s[s.length >> 1], stalls = s.filter((d) => d > 34).length / s.length;
         samples = [];
-        if ((median > 22 || stalls > 0.2) && tier < 2 && forcedTier < 0) {
+        if ((median > 20 || stalls > 0.2) && tier < 2 && forcedTier < 0) {
           drop++;
           try { localStorage.setItem(DROP_KEY, JSON.stringify({ n: drop, t: Date.now() })); } catch (e) { /* fine */ }
           if (loadSet()) onScroll();
@@ -398,12 +423,17 @@
 
   /* ---------- start ---------- */
   if ("scrollRestoration" in history) history.scrollRestoration = "manual";
-  if (!location.hash) scrollTo(0, 0);
+  if (!location.hash) {
+    scrollTo(0, 0);
+    waiting = true; holdScroll(true);
+    setTimeout(openGate, WAIT_MAX);
+  }
   loadSet();
   update();
 
   // the first screen of the website is placed (not animated) so the hand-off is just the blur
   document.addEventListener("DOMContentLoaded", () => {
+    if (waiting) holdScroll(true);                       // the smooth scroller exists now: hold it too
     root.classList.add("instant");
     document.querySelectorAll(".hero [data-reveal], .hero [data-split]").forEach((el) => el.classList.add("is-in"));
     document.body.offsetHeight;
