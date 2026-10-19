@@ -5,8 +5,8 @@ rendered step is a similar, small change. Motion blur is kept light so frames st
 when scrubbed by scrolling.
 
 Run headless, once per scene:
-  blender -b blender/noma_entrance.blend     --python blender/render_timeline.py -- blender/render_v2_night
-  blender -b blender/noma_entrance_day.blend --python blender/render_timeline.py -- blender/render_v2_day
+  blender -b blender/noma_entrance.blend     --python blender/render_timeline.py -- blender/render_v3_night
+  blender -b blender/noma_entrance_day.blend --python blender/render_timeline.py -- blender/render_v3_day
 Already-rendered frames are skipped, so an interrupted run can simply be started again.
 """
 import json
@@ -23,7 +23,7 @@ os.makedirs(out, exist_ok=True)
 sc = bpy.context.scene
 sc.render.use_motion_blur = True
 sc.render.motion_blur_shutter = 0.12
-sc.eevee.taa_render_samples = 32
+sc.eevee.taa_render_samples = 28
 sc.render.image_settings.file_format = "PNG"
 
 for i, t in enumerate(times):

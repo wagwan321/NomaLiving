@@ -1,8 +1,8 @@
 """Turn rendered PNG frames into the web image sequence used by the scroll walk-through.
 
 Usage (from the project root):
-    python blender/frames.py night blender/render_v2_night
-    python blender/frames.py day   blender/render_v2_day
+    python blender/frames.py night blender/render_v3_night
+    python blender/frames.py day   blender/render_v3_day
 
 Frames come from blender/render_timeline.py (f_0000.png … one per entry of
 blender/timeline.json) and are written as assets/cine/<mode>/000.webp … at the full render

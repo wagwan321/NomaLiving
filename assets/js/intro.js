@@ -173,6 +173,7 @@
     // the hand-off: past the last frame the screen blurs into the page; back up, it returns
     if (!through && p >= 0.999) {
       through = true;
+      if (userScrolled) holdAtSiteTop();
       root.classList.add("page-blur");
       document.querySelector("main")?.offsetHeight;     // start the page blurred…
       cine.classList.add("is-through");
@@ -183,6 +184,25 @@
       root.classList.add("cine-on");
     }
   };
+  // Arriving at the website: however fast (or slowly) you were scrolling, land exactly on the
+  // homepage's first screen and hold there while the blur plays, then let scrolling resume.
+  let userScrolled = false;
+  const HOLD_MS = 1300;
+  const holdAtSiteTop = () => {
+    const y = end();
+    const smoothScroller = typeof lenis !== "undefined" && lenis;
+    if (smoothScroller) {
+      lenis.stop();
+      lenis.scrollTo(y, { immediate: true, force: true });
+    } else {
+      root.style.overflow = "hidden";
+      scrollTo(0, y);
+    }
+    setTimeout(() => {
+      if (smoothScroller) lenis.start(); else root.style.overflow = "";
+    }, HOLD_MS);
+  };
+  for (const ev of ["wheel", "touchmove", "keydown", "pointerdown"]) addEventListener(ev, () => { userScrolled = true; }, { passive: true });
   const onScroll = () => { if (!queued) { queued = true; requestAnimationFrame(update); } };
 
   // ?fps shows a live meter: screen refreshes per second, and how many of them painted a new image
