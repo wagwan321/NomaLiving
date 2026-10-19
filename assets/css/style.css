@@ -198,6 +198,8 @@ main { transition: filter 1.5s cubic-bezier(.3, 0, .2, 1); }
 @keyframes wheel { 0% { transform: translateY(0); opacity: 0; } 20% { opacity: 1; } 70% { transform: translateY(14px); opacity: 0; } 100% { transform: translateY(14px); opacity: 0; } }
 
 .cine__progress { left: 0; right: 0; bottom: 0; z-index: 5; height: 2px; background: rgba(255, 244, 228, .14); }
+.cine__progress b { position: absolute; inset: 0; background: rgba(255, 244, 228, .26); transform-origin: left; transform: scaleX(var(--loaded, 0)); transition: transform .4s ease, opacity 1s ease .4s; }
+.cine.is-loaded .cine__progress b { opacity: 0; }
 .cine__progress i { position: absolute; inset: 0; background: linear-gradient(90deg, #ffb862, #ffe2b8); transform-origin: left; transform: scaleX(var(--progress, 0)); }
 
 .cine__loading { inset: 0; z-index: 3; display: grid; place-items: center; color: #F3E6D3; transition: opacity .6s ease; pointer-events: none; }

@@ -73,7 +73,10 @@ let plan = "month";
 /* ---------- Smooth scroll ---------- */
 let lenis = null;
 if (window.Lenis && !reduceMotion) {
-  lenis = new Lenis({ duration: 1.15, easing: (t) => 1 - Math.pow(1 - t, 4) });
+  // lerp: follows the wheel closely (frame-rate independent), still soft at the end
+  lenis = new Lenis({ lerp: 0.11, wheelMultiplier: 1 });
+  // redraw the walk-through inside the same frame as the scroll, not one frame later
+  lenis.on("scroll", () => window.NomaIntro && window.NomaIntro.sync());
   const raf = (t) => { lenis.raf(t); requestAnimationFrame(raf); };
   requestAnimationFrame(raf);
 }
