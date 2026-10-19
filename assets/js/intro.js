@@ -50,45 +50,41 @@
   };
   tick(); setInterval(tick, 30000);
 
-  /* ---------- frames: full 1920×1080 ---------- */
-  // 290 rendered frames; phones take every second one to save data. Between two frames
-  // the next one is blended in by exactly how far you've scrolled, so motion stays fluid
-  // at any scroll speed instead of stepping frame to frame.
-  // All frames are downloaded as compact files; only a window of frames around the
-  // current position is decoded (off the main thread) so drawing never waits on a decode.
-  // where each frame sits along the scroll (blender/frames.py): fast camera moves get more
-  // scroll distance, so every bit of scrolling shows a similar amount of change
+  /* ---------- frames ---------- */
+  // Two renders of the walk-through: landscape (1920×1080) for computers and sideways screens,
+  // portrait (1080×1920) for phones and upright tablets, so nothing important is cropped away.
+  // Phones load every second frame (portrait only has those). Between two frames the next one
+  // is blended in by exactly how far you've scrolled, so motion stays fluid at any speed.
+  // Frames download as compact files; only a window around the current position is decoded,
+  // off the main thread, so drawing never waits on a decode. Rotating the device swaps sets.
+  // Where each frame sits along the scroll comes from blender/frames.py (even-pace timeline).
   const TL = window.NOMA_TIMELINE || null;
   const TOTAL = TL ? TL.length : 290;
-  const SMALL = Math.min(innerWidth, innerHeight) < 600;   // phones (either orientation)
-  const STEP = SMALL ? 2 : 1;
-  const ids = []; for (let i = 0; i < TOTAL; i += STEP) ids.push(i);
-  const N = ids.length;
-  const BACK = SMALL ? 5 : 8, AHEAD = SMALL ? 10 : 18;
-  const src = (j) => `assets/cine/${mode}/${String(ids[j]).padStart(3, "0")}.webp?v=14`;
-  const blobs = new Array(N);
-  const bitmaps = new Array(N);
-  const decoding = new Set();
+  const MAX_DECODES = 2;
+  const canvas = cine.querySelector(".cine__canvas");
+  const ctx = canvas.getContext("2d", { alpha: false });
+  let folder = "", STEP = 1, ids = [], N = 0, BACK = 8, AHEAD = 18, W = 1920, H = 1080, gen = 0;
+  let blobs = [], bitmaps = [], decoding = new Set();
   let pos = 0, dir = 1, drawnKey = "";
   const ready = (i) => i >= 0 && i < N && !!bitmaps[i];
+  const src = (j) => `assets/cine/${folder}/${String(ids[j]).padStart(3, "0")}.webp?v=15`;
 
-  // at most two decodes in flight, nearest frame first, so decoding never crowds out drawing
-  const MAX_DECODES = 2;
   const pump = () => {
     if (decoding.size >= MAX_DECODES) return;
-    const a = Math.floor(pos);
+    const g = gen, a = Math.floor(pos);
     const lo = Math.max(0, a - (dir > 0 ? BACK : AHEAD)), hi = Math.min(N - 1, a + (dir > 0 ? AHEAD : BACK));
     for (let o = 0; o <= Math.max(a - lo, hi - a) && decoding.size < MAX_DECODES; o++) {
       for (const i of dir > 0 ? [a + o, a - o] : [a - o, a + o]) {
         if (i < lo || i > hi || !blobs[i] || bitmaps[i] || decoding.has(i)) continue;
         decoding.add(i);
         createImageBitmap(blobs[i]).then((bm) => {
+          if (g !== gen) { bm.close(); return; }
           decoding.delete(i);
           const c = Math.floor(pos);
           if (i < c - BACK - 4 || i > c + AHEAD + 4) bm.close();
           else { bitmaps[i] = bm; if (Math.abs(i - pos) < 2) paint(); }
           pump();
-        }, () => { decoding.delete(i); pump(); });
+        }, () => { if (g === gen) { decoding.delete(i); pump(); } });
         if (decoding.size >= MAX_DECODES) break;
       }
     }
@@ -102,16 +98,7 @@
     }
     pump();
   };
-  const fetchFrame = (i) => fetch(src(i)).then((r) => r.blob()).then((b) => { blobs[i] = b; keepWindow(); }, () => {});
-  // first frame, then the frames right after it, then a coarse-to-fine pass over the rest
-  const order = [];
-  for (let i = 0; i < Math.min(N, AHEAD + 1); i++) order.push(i);
-  for (const step of [16, 8, 4, 2, 1]) for (let i = 0; i < N; i += step) if (!order.includes(i)) order.push(i);
 
-  /* ---------- canvas: drawn 1:1, scaled to the screen by CSS (object-fit: cover) ---------- */
-  const canvas = cine.querySelector(".cine__canvas");
-  canvas.width = 1920; canvas.height = 1080;
-  const ctx = canvas.getContext("2d", { alpha: false });
   const nearest = (i) => {
     for (let o = 0; o < N; o++) {
       if (ready(i - o)) return i - o;
@@ -127,23 +114,64 @@
     const key = blend ? `${a}:${Math.round(f * 64)}` : `${ka}`;
     if (key === drawnKey) return;
     ctx.globalAlpha = 1;
-    ctx.drawImage(bitmaps[ka], 0, 0, 1920, 1080);
+    ctx.drawImage(bitmaps[ka], 0, 0, W, H);
     if (blend) {
       ctx.globalAlpha = f;
-      ctx.drawImage(bitmaps[a + 1], 0, 0, 1920, 1080);
+      ctx.drawImage(bitmaps[a + 1], 0, 0, W, H);
       ctx.globalAlpha = 1;
     }
     drawnKey = key;
     if (!cine.classList.contains("is-ready")) cine.classList.add("is-ready");
   }
 
-  (async () => {
-    for (let k = 0; k < order.length; k += 6) await Promise.all(order.slice(k, k + 6).map(fetchFrame));
-  })();
+  // choose the frame set for this screen (and re-choose when it rotates)
+  let noPortrait = false;   // set if the portrait frames can't be loaded: fall back to landscape
+  const loadSet = () => {
+    const portrait = !noPortrait && innerHeight > innerWidth * 1.05;
+    const small = Math.min(innerWidth, innerHeight) < 600;
+    const name = `${mode}${portrait ? "-p" : ""}`;
+    const step = portrait || small ? 2 : 1;
+    if (name === folder && step === STEP) return false;
+    gen++;
+    bitmaps.forEach((b) => b && b.close());
+    folder = name; STEP = step;
+    W = portrait ? 1080 : 1920; H = portrait ? 1920 : 1080;
+    canvas.width = W; canvas.height = H;
+    BACK = small ? 5 : 8; AHEAD = small ? 10 : 18;
+    ids = []; for (let i = 0; i < TOTAL; i += STEP) ids.push(i);
+    N = ids.length;
+    blobs = new Array(N); bitmaps = new Array(N); decoding = new Set(); drawnKey = "";
+    pos = Math.min(N - 1, frameAt(clamp(scrollY / end())) / STEP);
+    const g = gen;
+    const fetchFrame = (i) => fetch(src(i)).then((r) => {
+      if (!r.ok) throw new Error(r.status);
+      return r.blob();
+    }).then((b) => {
+      if (g !== gen) return;
+      blobs[i] = b; keepWindow();
+    }, () => {
+      if (g === gen && portrait && !noPortrait && i === order[0]) { noPortrait = true; loadSet(); drawnKey = ""; onScroll(); }
+    });
+    // the frames around where you are first, then a coarse-to-fine pass over the rest
+    const start = Math.floor(pos), order = [];
+    for (let i = start; i < Math.min(N, start + AHEAD + 1); i++) order.push(i);
+    for (const s of [16, 8, 4, 2, 1]) for (let i = 0; i < N; i += s) if (!order.includes(i)) order.push(i);
+    (async () => {
+      for (let k = 0; k < order.length; k += 6) {
+        if (g !== gen) return;
+        await Promise.all(order.slice(k, k + 6).map(fetchFrame));
+      }
+    })();
+    return true;
+  };
 
   /* ---------- scroll → frame (Lenis already smooths the scroll) ---------- */
-  // the website starts one screen before the end of the spacer (main is pulled up by 100vh)
-  const end = () => Math.max(1, spacer.offsetHeight - innerHeight);
+  // the website starts where <main> starts (main is pulled up over the end of the spacer);
+  // measuring it directly stays right when mobile toolbars change the screen height
+  const end = () => {
+    const m = document.querySelector("main");
+    return Math.max(1, m ? m.offsetTop : spacer.offsetHeight - innerHeight);
+  };
   window.NomaIntro = { enabled: true, end };
   const clamp = (v) => Math.min(1, Math.max(0, v));
   const smooth = (a, b, v) => { const t = clamp((v - a) / (b - a)); return t * t * (3 - 2 * t); };
@@ -224,11 +252,22 @@
     requestAnimationFrame(loop);
   }
   addEventListener("scroll", onScroll, { passive: true });
-  addEventListener("resize", onScroll);
+  let resizeT;
+  addEventListener("resize", () => {
+    clearTimeout(resizeT);
+    resizeT = setTimeout(() => { if (loadSet()) drawnKey = ""; onScroll(); }, 250);
+  });
+
+  // touch screens: "Swipe up to step inside"
+  if (matchMedia("(hover: none) and (pointer: coarse)").matches) {
+    const t = cine.querySelector(".cine__hint-text");
+    if (t && t.dataset.touch) t.textContent = t.dataset.touch;
+  }
 
   /* ---------- start ---------- */
   if ("scrollRestoration" in history) history.scrollRestoration = "manual";
   if (!location.hash) scrollTo(0, 0);
+  loadSet();
   update();
 
   // the first screen of the website is placed (not animated) so the hand-off is just the blur

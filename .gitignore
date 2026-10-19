@@ -4,4 +4,6 @@ blender/render_v2_night/
 blender/render_v2_day/
 blender/render_v3_night/
 blender/render_v3_day/
+blender/render_portrait_night/
+blender/render_portrait_day/
 *.blend1
