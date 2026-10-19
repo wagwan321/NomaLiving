@@ -72,12 +72,13 @@
   const nav = navigator, conn = nav.connection || {};
   const smallScreen = () => Math.min(innerWidth, innerHeight) < 600;
 
-  // steps this device has had to take down before (remembered for a week)
+  // steps the frame-rate watch has taken down during this visit only: a slow moment (another
+  // program busy on the graphics card) must never follow a visitor to their next visit
   const DROP_KEY = "noma-cine-drop";
   let drop = 0;
   try {
-    const d = JSON.parse(localStorage.getItem(DROP_KEY));
-    if (d && Date.now() - d.t < 6048e5) drop = Math.min(2, d.n | 0);
+    localStorage.removeItem(DROP_KEY);                 // older versions kept it for a week
+    drop = Math.min(2, sessionStorage.getItem(DROP_KEY) | 0);
   } catch (e) { /* storage blocked: start fresh */ }
   const forcedTier = params.has("q") ? Math.min(2, Math.max(0, +params.get("q") | 0)) : -1;
 
@@ -91,7 +92,10 @@
     const mem = nav.deviceMemory, cores = nav.hardwareConcurrency, net = conn.effectiveType || "";
     if (conn.saveData || /2g/.test(net) || (mem && mem <= 2) || (cores && cores <= 2)) t = 2;
     else if (net === "3g" || (mem && mem <= 4)) t = Math.max(t, 1);
-    return Math.min(2, t + drop);
+    // big, sharp screens never go below 720p, and capable machines step down once at most
+    const strong = (!cores || cores >= 6) && (!mem || mem >= 8);
+    const floor = t === 0 ? 1 : 2;
+    return Math.min(floor, t + Math.min(drop, strong ? 1 : 2));
   };
   // decoded frames take width × height × 4 bytes each: keep the window within a memory budget
   const budget = () => (smallScreen() ? 70 : nav.deviceMemory && nav.deviceMemory <= 4 ? 120 : 230) * 1e6;
@@ -368,8 +372,9 @@
 
   // Frame-rate watch: while you scroll through the walk-through, time every screen refresh.
   // If this device keeps missing frames (under ~50 fps, or many long stalls), step down one
-  // quality level: lighter images to decode and draw. Remembered for next visit.
-  let scrollAt = 0, samples = [], lastT = 0;
+  // quality level: lighter images to decode and draw. It has to see this twice in a row, and
+  // it only lasts for this visit.
+  let scrollAt = 0, samples = [], lastT = 0, badRuns = 0;
   const watch = (t) => {
     if (off) return;
     if (lastT && !through && !document.hidden && t > settleUntil && t - scrollAt < 150) {
@@ -378,10 +383,14 @@
         const s = samples.slice().sort((a, b) => a - b);
         const median = s[s.length >> 1], stalls = s.filter((d) => d > 34).length / s.length;
         samples = [];
-        if ((median > 20 || stalls > 0.2) && tier < 2 && forcedTier < 0) {
-          drop++;
-          try { localStorage.setItem(DROP_KEY, JSON.stringify({ n: drop, t: Date.now() })); } catch (e) { /* fine */ }
-          if (loadSet()) onScroll();
+        badRuns = median > 20 || stalls > 0.2 ? badRuns + 1 : 0;
+        if (badRuns >= 2 && tier < 2 && forcedTier < 0) {
+          badRuns = 0; drop++;
+          if (!loadSet()) drop--;                          // already as low as this screen goes
+          else {
+            try { sessionStorage.setItem(DROP_KEY, drop); } catch (e) { /* fine */ }
+            onScroll();
+          }
         }
       }
     }
