@@ -179,6 +179,8 @@ main { transition: filter 1.5s cubic-bezier(.3, 0, .2, 1); }
 .cine.is-ready .cine__hint { opacity: var(--hint, 1); transition: none; }
 /* first visit: scrolling waits on the opening shot until enough of the walk-through has arrived */
 html.cine-wait { overflow: hidden; }
+/* the walk-through playing on its own: the page itself doesn't scroll under the finger */
+html.cine-auto { overflow: hidden; touch-action: none; }
 .cine-wait .cine.is-ready .cine__hint { opacity: .35; transition: opacity .6s ease; }
 .cine-wait .cine__mouse i, .cine-wait .cine__swipe i { animation-play-state: paused; }
 .cine-opening .cine.is-ready .cine__hint { transition: opacity .7s ease; }

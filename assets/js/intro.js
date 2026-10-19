@@ -204,6 +204,7 @@
     if (!waiting) return;
     waiting = false;
     holdScroll(false);
+    if (pendingAuto) { const w = pendingAuto; pendingAuto = 0; autoTo(w); }
     root.classList.add("cine-opening");
     setTimeout(() => root.classList.remove("cine-opening"), 900);
   }
@@ -225,11 +226,13 @@
     }
     return -1;
   };
-  function paint() {
-    const a = Math.floor(pos), f = pos - a;
-    const ka = nearest(a);
+  // While moving, the next frame is blended in by how far you are between the two; at rest
+  // (snap) only the closest single frame is shown, so a still picture is always a clean one.
+  function paint(snap) {
+    const a = snap ? Math.round(pos) : Math.floor(pos), f = pos - a;
+    const ka = nearest(Math.min(N - 1, a));
     if (ka < 0) return;
-    const blend = ka === a && f > 0.02 && ready(a + 1);
+    const blend = !snap && ka === a && f > 0.02 && ready(a + 1);
     const key = blend ? `${a}:${Math.round(f * 64)}` : `${ka}`;
     if (key === drawnKey) return;
     ctx.globalAlpha = 1;
@@ -315,7 +318,7 @@
     const span = TL[hi] - TL[lo];
     return lo + (span > 0 ? (p - TL[lo]) / span : 0);
   };
-  let through = false, queued = false, lastP = -1, lastY = -1;
+  let through = false, queued = false, lastP = -1, lastY = -1, snapT = 0;
 
   const update = () => {
     queued = false;
@@ -326,6 +329,8 @@
     const next = Math.min(N - 1, frameAt(p) / STEP);
     if (next !== pos) { dir = next > pos ? 1 : -1; pos = next; keepWindow(); }
     paint();
+    clearTimeout(snapT);
+    if (pos % 1) snapT = setTimeout(() => paint(true), 160);
     if (Math.abs(p - lastP) > 0.0005) {
       lastP = p;
       set("--hint", 1 - smooth(0, 0.03, p));
@@ -351,10 +356,12 @@
 
   // Arriving at the website: however fast (or slowly) you were scrolling, land exactly on the
   // homepage's first screen and hold there while the blur plays, then let scrolling resume.
-  let userScrolled = false;
+  let userScrolled = false, holding = false;
   const HOLD_MS = 1300;
   const holdAtSiteTop = () => {
     const y = end();
+    holding = true;
+    stopAuto(false);
     const smoothScroller = typeof lenis !== "undefined" && lenis;
     if (smoothScroller) {
       lenis.stop();
@@ -364,9 +371,95 @@
       scrollTo(0, y);
     }
     setTimeout(() => {
+      holding = false;
       if (smoothScroller) lenis.start(); else root.style.overflow = "";
     }, HOLD_MS);
   };
+
+  /* ---------- one scroll plays it ---------- */
+  // Not everyone knows to keep scrolling, so a single scroll, swipe or key press plays the whole
+  // walk-through on its own, at an even pace, all the way to the website. Scrolling the other
+  // way reverses it; scrolling up from the top of the website walks you back out to the street.
+  // If the connection falls behind, it waits for the frames instead of jumping.
+  const AUTO_MS = 9000;                                  // the full walk-through, start to end
+  const smoothScroller = () => (typeof lenis !== "undefined" && lenis) || null;
+  const jump = (y) => {
+    const l = smoothScroller();
+    if (l) l.scrollTo(y, { immediate: true, force: true }); else scrollTo(0, y);
+    update();
+  };
+  const easeInOut = (k) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
+  let auto = null, pendingAuto = 0;
+  function stopAuto(release = true) {
+    if (!auto) return;
+    cancelAnimationFrame(auto.raf);
+    auto = null;
+    root.classList.remove("cine-auto");
+    const l = smoothScroller();
+    if (release && !holding) { if (l) l.start(); else root.style.overflow = ""; }
+  }
+  const autoTo = (way) => {
+    if (off || holding) return;
+    if (waiting) { pendingAuto = way; return; }          // still loading: start when ready
+    const target = way > 0 ? end() : 0, y0 = scrollY, dist = Math.abs(target - y0);
+    stopAuto(false);
+    if (dist < 2) { const l = smoothScroller(); if (l) l.start(); return; }
+    const l = smoothScroller();
+    if (l) l.stop(); else root.style.overflow = "hidden";
+    root.classList.add("cine-auto");
+    const a = { way, y0, target, dur: Math.max(1400, AUTO_MS * dist / end()), elapsed: 0, last: 0, raf: 0 };
+    auto = a;
+    const step = (t) => {
+      if (auto !== a) return;
+      const dt = a.last ? Math.min(t - a.last, 50) : 0;
+      a.last = t;
+      // buffering: don't move onto a frame that hasn't downloaded yet
+      const k1 = clamp((a.elapsed + dt) / a.dur);
+      const y1 = a.y0 + (a.target - a.y0) * easeInOut(k1);
+      const i1 = Math.min(N - 1, Math.round(frameAt(clamp(y1 / end())) / STEP));
+      if (state[i1] === 2 || k1 >= 1) a.elapsed += dt;
+      const k = clamp(a.elapsed / a.dur);
+      jump(a.y0 + (a.target - a.y0) * easeInOut(k));
+      if (k < 1) a.raf = requestAnimationFrame(step);
+      else if (auto === a) stopAuto(true);
+    };
+    a.raf = requestAnimationFrame(step);
+  };
+  // which way the visitor wants to go; null when the input isn't a scroll
+  let touchY = null;
+  const intent = (e) => {
+    if (e.type === "wheel") return Math.abs(e.deltaY) < 2 ? 0 : Math.sign(e.deltaY);
+    if (e.type === "touchstart") { touchY = e.touches[0].clientY; return 0; }
+    if (e.type === "touchmove") {
+      if (touchY === null) return 0;
+      const d = touchY - e.touches[0].clientY;
+      return Math.abs(d) < 10 ? 0 : Math.sign(d);
+    }
+    if (e.type === "keydown") {
+      if (e.target.closest && e.target.closest("input, textarea, select, [contenteditable]")) return 0;
+      if (["ArrowDown", "PageDown", "End", " "].includes(e.key)) return e.shiftKey && e.key === " " ? -1 : 1;
+      if (["ArrowUp", "PageUp", "Home"].includes(e.key)) return -1;
+    }
+    return 0;
+  };
+  const onIntent = (e) => {
+    const way = intent(e);
+    if (!way || off || holding) return;
+    const y = scrollY, top = end();
+    if (auto) {
+      if (way !== auto.way) autoTo(way);               // changed their mind: reverse
+      if (e.cancelable) e.preventDefault();
+      return;
+    }
+    // inside the walk-through (or scrolling up from the very top of the website)
+    const inside = way > 0 ? y < top - 2 : y <= top + 2 && y > 2;
+    if (!inside) return;
+    if (e.cancelable) e.preventDefault();
+    autoTo(way);
+  };
+  for (const ev of ["wheel", "keydown"]) addEventListener(ev, onIntent, { passive: false });
+  // touches only on the walk-through layer, so the website itself keeps fast native scrolling
+  for (const ev of ["touchstart", "touchmove"]) cine.addEventListener(ev, onIntent, { passive: false });
   for (const ev of ["wheel", "touchmove", "keydown", "pointerdown"]) addEventListener(ev, () => { userScrolled = true; }, { passive: true });
   const onScroll = () => { if (!queued) { queued = true; requestAnimationFrame(update); } };
 
