@@ -66,11 +66,11 @@
   // first) and only a window around the current position is decoded, off the main thread.
   // A frame-rate watch steps down a level if a device keeps missing frames, and remembers it.
   // Where each frame sits along the scroll comes from blender/frames.py (even-pace timeline).
-  const V = 17;                                     // bump when the frames change
+  const V = 18;                                     // bump when the frames change
   // Day is now real-photo footage (Higgsfield, re-timed to an even glide, see higgsfield/):
   // its frames are evenly spaced, so it uses a plain linear timeline. Night is still the
   // Blender render with its even-pace timeline (blender/frames.py).
-  const FOOTAGE = { day: { total: 372, seconds: 15.5 } };
+  const FOOTAGE = { day: { total: 743, seconds: 15.5 } };
   const footage = FOOTAGE[mode] || null;
   const TL = footage ? null : window.NOMA_TIMELINE || null;
   const TOTAL = footage ? footage.total : TL ? TL.length : 290;
@@ -487,9 +487,15 @@
     if (e.cancelable) e.preventDefault();
     autoTo(way);
   };
-  for (const ev of ["wheel", "keydown"]) addEventListener(ev, onIntent, { passive: false });
+  // Autoplay is off: the walk-through moves only as you scroll (scrubbing). onIntent/autoTo stay
+  // available; set AUTOPLAY = true to bring the one-scroll playback back.
+  const AUTOPLAY = false;
+  const onHold = (e) => {                                // while loading or holding on the website, stay put
+    if ((holding || waiting) && intent(e) && e.cancelable && scrollY <= end() + 2) e.preventDefault();
+  };
+  for (const ev of ["wheel", "keydown"]) addEventListener(ev, AUTOPLAY ? onIntent : onHold, { passive: false });
   // touches only on the walk-through layer, so the website itself keeps fast native scrolling
-  for (const ev of ["touchstart", "touchmove"]) cine.addEventListener(ev, onIntent, { passive: false });
+  for (const ev of ["touchstart", "touchmove"]) cine.addEventListener(ev, AUTOPLAY ? onIntent : onHold, { passive: false });
   for (const ev of ["wheel", "touchmove", "keydown", "pointerdown"]) addEventListener(ev, () => { userScrolled = true; }, { passive: true });
   const onScroll = () => { if (!queued) { queued = true; requestAnimationFrame(update); } };
 
