@@ -66,9 +66,14 @@
   // first) and only a window around the current position is decoded, off the main thread.
   // A frame-rate watch steps down a level if a device keeps missing frames, and remembers it.
   // Where each frame sits along the scroll comes from blender/frames.py (even-pace timeline).
-  const V = 16;                                     // bump when the frames change
-  const TL = window.NOMA_TIMELINE || null;
-  const TOTAL = TL ? TL.length : 290;
+  const V = 17;                                     // bump when the frames change
+  // Day is now real-photo footage (Higgsfield, re-timed to an even glide, see higgsfield/):
+  // its frames are evenly spaced, so it uses a plain linear timeline. Night is still the
+  // Blender render with its even-pace timeline (blender/frames.py).
+  const FOOTAGE = { day: { total: 372, seconds: 15.5 } };
+  const footage = FOOTAGE[mode] || null;
+  const TL = footage ? null : window.NOMA_TIMELINE || null;
+  const TOTAL = footage ? footage.total : TL ? TL.length : 290;
   const MAX_DECODES = 2, MAX_FETCHES = 6;
   const TIERS = [["", 1920, 1080], ["-md", 1280, 720], ["-sm", 960, 540]];   // suffix, long, short side
   const nav = navigator, conn = nav.connection || {};
@@ -386,8 +391,8 @@
   // Playback follows its own pace (blender/autoplay_pace.py): walking at an even speed, and
   // turns stretched out so the camera never rotates faster than ~40° a second. It cruises at a
   // steady speed with a gentle start and stop only at the very ends.
-  const PACE = window.NOMA_PACE || null;                 // playback time (0-1) of each frame
-  const PACE_MS = (window.NOMA_PACE_SECONDS || 9.6) * 1000;
+  const PACE = footage ? null : window.NOMA_PACE || null;   // playback time (0-1) of each frame
+  const PACE_MS = (footage ? footage.seconds : window.NOMA_PACE_SECONDS || 9.6) * 1000;
   const lerpAt = (arr, fr) => {                          // value at a fractional frame
     if (!arr) return fr / (TOTAL - 1);
     const a = Math.min(TOTAL - 2, Math.max(0, Math.floor(fr)));

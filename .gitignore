@@ -7,3 +7,8 @@ blender/render_v3_day/
 blender/render_portrait_night/
 blender/render_portrait_day/
 *.blend1
+blender/*_before_zfix/
+blender/vis*.json
+higgsfield/video/
+higgsfield/keyframes/
+blender/rerender*.json
