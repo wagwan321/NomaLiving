@@ -21,6 +21,7 @@ FPS = 24
 SETS = {
     "desktop": (1920, 1080, ["shot1_day_clear", "b_desk_clean", "c_desk"]),
     "phone": (1080, 1920, ["p1_day_clear", "b_phone_clean2", "c_phone"]),
+    "tour-desktop": (1920, 1080, ["shot1_day_clear", "../tour/tour_desk_1080p"]),
 }
 # phone shot 3 overshoots its end frame (it invents a window and an arched door after 4.5 s):
 # stop it there, slowing down smoothly instead of cutting mid-motion
@@ -114,10 +115,13 @@ def build(kind):
                 k = i / EASE
                 e = 1 - k * k * (3 - 2 * k)
                 nxt[i] = transform(nxt[i], 1 + (s2 - 1) * e, dx2 * e, dy2 * e)
-        for i in range(BLEND):                      # blend across the join
+        from resample import between, flow          # motion-based morph: no double images
+        for i in range(BLEND):                      # morph across the join
             m = (i + 1) / (BLEND + 1)
             j = len(out) - BLEND + i
-            out[j] = (out[j] * (1 - m) + nxt[i] * m).astype(np.uint8)
+            A, B = np.ascontiguousarray(out[j]), np.ascontiguousarray(nxt[i])
+            sc = 960 / max(A.shape[:2])
+            out[j] = between(A, B, m, flow(A, B, sc), flow(B, A, sc))
         out += nxt[BLEND:]
     dst = V + f"noma-walkthrough-day-{kind}-v2.mp4"
     enc = subprocess.Popen([FF, "-loglevel", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{w}x{h}",
