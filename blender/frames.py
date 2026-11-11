@@ -23,7 +23,7 @@ from concurrent.futures import ProcessPoolExecutor
 
 from PIL import Image
 
-TIERS = {"": (1.0, 72, 6), "-md": (2 / 3, 72, 4), "-sm": (0.5, 70, 4)}   # scale, quality, effort
+TIERS = {"": (1.0, 86, 6), "-md": (2 / 3, 80, 4), "-sm": (0.5, 74, 4)}   # scale, quality, effort
 
 
 def export(job):

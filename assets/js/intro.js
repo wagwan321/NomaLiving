@@ -66,12 +66,12 @@
   // first) and only a window around the current position is decoded, off the main thread.
   // A frame-rate watch steps down a level if a device keeps missing frames, and remembers it.
   // Where each frame sits along the scroll comes from blender/frames.py (even-pace timeline).
-  const V = 20;                                     // bump when the frames change
+  const V = 21;                                     // bump when the frames change
   // Day is now real-photo footage (Higgsfield, re-timed to an even glide, see higgsfield/):
   // its frames are evenly spaced, so it uses a plain linear timeline. Night is still the
   // Blender render with its even-pace timeline (blender/frames.py).
   // pictures per set: computer (landscape) and phone (portrait) footage can differ in length
-  const FOOTAGE = { day: { total: 757, seconds: 8.2, portrait: { total: 743, seconds: 15.5 } } };
+  const FOOTAGE = { day: { total: 379, seconds: 8.2, portrait: { total: 743, seconds: 15.5 } } };
   // the real-photo walk-through is shown day and night (there is no night footage of it yet);
   // data-time still follows Beirut's sun for the rest of the page
   const frames = FOOTAGE.day ? "day" : mode;
@@ -243,13 +243,18 @@
     const a = snap ? Math.round(pos) : Math.floor(pos), f = pos - a;
     const ka = nearest(Math.min(N - 1, a));
     if (ka < 0) return;
-    const blend = !snap && ka === a && f > 0.02 && ready(a + 1);
-    const key = blend ? `${a}:${Math.round(f * 64)}` : `${ka}`;
+    // only cross-fade in the middle of the step between two frames: most of the time one sharp
+    // frame is on screen, so there is no double image (ghosting) while scrolling
+    const fa = f < 0.3 ? 0 : f > 0.7 ? 1 : (f - 0.3) / 0.4;
+    const fb = fa * fa * (3 - 2 * fa);
+    const blend = !snap && ka === a && fb > 0.01 && fb < 0.99 && ready(a + 1);
+    const showNext = !snap && ka === a && fb >= 0.99 && ready(a + 1);
+    const key = blend ? `${a}:${Math.round(fb * 64)}` : `${showNext ? a + 1 : ka}`;
     if (key === drawnKey) return;
     ctx.globalAlpha = 1;
-    ctx.drawImage(bitmaps[ka], 0, 0, W, H);
+    ctx.drawImage(bitmaps[showNext ? a + 1 : ka], 0, 0, W, H);
     if (blend) {
-      ctx.globalAlpha = f;
+      ctx.globalAlpha = fb;
       ctx.drawImage(bitmaps[a + 1], 0, 0, W, H);
       ctx.globalAlpha = 1;
     }
