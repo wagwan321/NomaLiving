@@ -72,7 +72,10 @@
   // Blender render with its even-pace timeline (blender/frames.py).
   // pictures per set: computer (landscape) and phone (portrait) footage can differ in length
   const FOOTAGE = { day: { total: 757, seconds: 8.2, portrait: { total: 743, seconds: 15.5 } } };
-  const footage = FOOTAGE[mode] || null;
+  // the real-photo walk-through is shown day and night (there is no night footage of it yet);
+  // data-time still follows Beirut's sun for the rest of the page
+  const frames = FOOTAGE.day ? "day" : mode;
+  const footage = FOOTAGE[frames] || null;
   const TL = footage ? null : window.NOMA_TIMELINE || null;
   let TOTAL = footage ? footage.total : TL ? TL.length : 290;
   const MAX_DECODES = 2, MAX_FETCHES = 6;
@@ -258,7 +261,7 @@
   const loadSet = () => {
     const portrait = !noPortrait && innerHeight > innerWidth * 1.05;
     const t = pickTier(portrait);
-    const name = `${mode}${portrait ? "-p" : ""}${TIERS[t][0]}`;
+    const name = `${frames}${portrait ? "-p" : ""}${TIERS[t][0]}`;
     const step = portrait || smallScreen() ? 2 : 1;
     if (name === folder && step === STEP) return false;
     gen++;
