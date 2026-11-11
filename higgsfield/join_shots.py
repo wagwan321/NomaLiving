@@ -22,6 +22,8 @@ SETS = {
     "desktop": (1920, 1080, ["shot1_day_clear", "b_desk_clean", "c_desk"]),
     "phone": (1080, 1920, ["p1_day_clear", "b_phone_clean2", "c_phone"]),
     "tour-desktop": (1920, 1080, ["shot1_day_clear", "../tour/tour_desk_1080p"]),
+    "tour3-desktop": (1920, 1080, ["shot1_day_clear", "../tour/tour3_1920"]),
+    "tour4-desktop": (1920, 1080, ["../tour4/s1_head", "../tour4/vB_tail"]),
 }
 # phone shot 3 overshoots its end frame (it invents a window and an arched door after 4.5 s):
 # stop it there, slowing down smoothly instead of cutting mid-motion

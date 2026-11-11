@@ -12,3 +12,6 @@ blender/vis*.json
 higgsfield/video/
 higgsfield/keyframes/
 blender/rerender*.json
+higgsfield/tour/
+higgsfield/tour4/
+higgsfield/__pycache__/
