@@ -20,7 +20,7 @@ N = 60                 # frames over which the wide view becomes the normal crop
 START_W = 1400         # landscape pixels across the phone at the start: the whole sign plus a margin
 START_CX = 1018        # centre of the sign
 SEAM = 90              # rows (landscape pixels) over which the original fades into the fill
-STRIPS = {"top": (0, 330), "bottom": (760, 1080)}   # rows of the video each fill is lined up with
+STRIPS = {"top": (0, 200), "bottom": (760, 1080)}   # rows of the video each fill is lined up with
 
 sift = cv2.SIFT_create(20000)
 
@@ -78,10 +78,26 @@ def main():
         T = np.array([[2, 0, 0], [0, 2, r0], [0, 0, 1]], float)       # half-size strip -> video coords
         tmpl = cv2.resize(g0, (W // 2, H // 2), interpolation=cv2.INTER_AREA)[r0 // 2:r1 // 2]
         tmpl = cv2.GaussianBlur(tmpl, (0, 0), 1).astype(np.float32)
-        Wm = (G @ T)[:2].astype(np.float32)
-        cc, Wm = cv2.findTransformECC(tmpl, gR, Wm, cv2.MOTION_AFFINE,
-                                      (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 500, 1e-7), None, 5)
-        align[key] = np.vstack([Wm, [0, 0, 1]]) @ np.linalg.inv(T)     # video frame 0 -> reframe
+        # straight lines stay straight: only one uniform scale and a shift (no slant, no rotation). The
+        # scale is searched, the shift is solved on the pixels (ECC) for each scale; best match wins.
+        best = (-1, None)
+        for sc in np.linspace(G[0, 0] * .85, G[0, 0] * 1.15, 61):
+            Wm = np.array([[1, 0, 0], [0, 1, 0]], np.float32)
+            ctr = np.array([W / 2, (r0 + r1) / 2, 1])
+            pt = G @ ctr                                             # keep the overall fit's centre as the start
+            Ws = np.array([[sc * 2, 0, pt[0] - sc * W / 2], [0, sc * 2, pt[1] - sc * (r1 - r0) / 2]], np.float32)
+            sm = cv2.resize(gR, None, fx=1, fy=1)
+            warped = cv2.warpAffine(sm, Ws, (tmpl.shape[1], tmpl.shape[0]), flags=cv2.INTER_LINEAR | cv2.WARP_INVERSE_MAP)
+            try:
+                cc, Wt = cv2.findTransformECC(tmpl, warped, Wm, cv2.MOTION_TRANSLATION,
+                                              (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 200, 1e-6), None, 5)
+            except cv2.error:
+                continue
+            if cc > best[0]:
+                full = np.vstack([Ws, [0, 0, 1]]) @ np.vstack([Wt, [0, 0, 1]])
+                best = (cc, full)
+        cc, Wm = best
+        align[key] = Wm @ np.linalg.inv(T)                             # video frame 0 -> reframe
         print(key, "edge match %.3f" % cc, np.round(align[key][:2].ravel(), 3))
 
     # 2) the video's own motion near each edge, frame to frame (upper half / lower half of the picture)
