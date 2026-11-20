@@ -66,12 +66,12 @@
   // first) and only a window around the current position is decoded, off the main thread.
   // A frame-rate watch steps down a level if a device keeps missing frames, and remembers it.
   // Where each frame sits along the scroll comes from blender/frames.py (even-pace timeline).
-  const V = 21;                                     // bump when the frames change
+  const V = 22;                                     // bump when the frames change
   // Day is now real-photo footage (Higgsfield, re-timed to an even glide, see higgsfield/):
   // its frames are evenly spaced, so it uses a plain linear timeline. Night is still the
   // Blender render with its even-pace timeline (blender/frames.py).
   // pictures per set: computer (landscape) and phone (portrait) footage can differ in length
-  const FOOTAGE = { day: { total: 379, seconds: 8.2, portrait: { total: 743, seconds: 15.5 } } };
+  const FOOTAGE = { day: { total: 379, seconds: 8.2, portrait: { total: 444, seconds: 10, step: 1 } } };
   // the real-photo walk-through is shown day and night (there is no night footage of it yet);
   // data-time still follows Beirut's sun for the rest of the page
   const frames = FOOTAGE.day ? "day" : mode;
@@ -267,7 +267,9 @@
     const portrait = !noPortrait && innerHeight > innerWidth * 1.05;
     const t = pickTier(portrait);
     const name = `${frames}${portrait ? "-p" : ""}${TIERS[t][0]}`;
-    const step = portrait || smallScreen() ? 2 : 1;
+    // a footage set can say its own frame step (the phone walk-through shows every real frame)
+    const pf = footage && portrait ? footage.portrait : null;
+    const step = pf && pf.step ? pf.step : portrait || smallScreen() ? 2 : 1;
     if (name === folder && step === STEP) return false;
     gen++;
     bitmaps.forEach(release);
