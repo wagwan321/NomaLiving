@@ -66,7 +66,7 @@
   // first) and only a window around the current position is decoded, off the main thread.
   // A frame-rate watch steps down a level if a device keeps missing frames, and remembers it.
   // Where each frame sits along the scroll comes from blender/frames.py (even-pace timeline).
-  const V = 27;                                     // bump when the frames change
+  const V = 28;                                     // bump when the frames change
   // Day is now real-photo footage (Higgsfield, re-timed to an even glide, see higgsfield/):
   // its frames are evenly spaced, so it uses a plain linear timeline. Night is still the
   // Blender render with its even-pace timeline (blender/frames.py).
