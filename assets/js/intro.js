@@ -66,12 +66,12 @@
   // first) and only a window around the current position is decoded, off the main thread.
   // A frame-rate watch steps down a level if a device keeps missing frames, and remembers it.
   // Where each frame sits along the scroll comes from blender/frames.py (even-pace timeline).
-  const V = 24;                                     // bump when the frames change
+  const V = 25;                                     // bump when the frames change
   // Day is now real-photo footage (Higgsfield, re-timed to an even glide, see higgsfield/):
   // its frames are evenly spaced, so it uses a plain linear timeline. Night is still the
   // Blender render with its even-pace timeline (blender/frames.py).
   // pictures per set: computer (landscape) and phone (portrait) footage can differ in length
-  const FOOTAGE = { day: { total: 379, seconds: 8.2, portrait: { total: 451, seconds: 11.2, step: 1 } } };
+  const FOOTAGE = { day: { total: 379, seconds: 8.2, portrait: { total: 467, seconds: 11.9, step: 1 } } };
   // the real-photo walk-through is shown day and night (there is no night footage of it yet);
   // data-time still follows Beirut's sun for the rest of the page
   const frames = FOOTAGE.day ? "day" : mode;
